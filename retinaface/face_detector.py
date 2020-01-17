@@ -36,34 +36,35 @@ class FaceDetector(object):
         return 'weights.pth'
 
     def get_faces(self, image: np.ndarray) -> (List[np.ndarray], List[float]):
-        img = image
-        image = image.astype(np.float32)
-        im_height, im_width, _ = image.shape
-        scale = torch.Tensor([image.shape[1], image.shape[0], image.shape[1], image.shape[0]])
-        image -= (104, 117, 123)
-        image = image.transpose(2, 0, 1)
-        image = torch.from_numpy(image).unsqueeze(0)
-        image = image.to(self.device)
-        scale = scale.to(self.device)
-
         with torch.no_grad():
+            img = image
+            image = image.astype(np.float32)
+            im_height, im_width, _ = image.shape
+            scale = torch.Tensor([image.shape[1], image.shape[0], image.shape[1], image.shape[0]])
+            image -= (104, 117, 123)
+            image = image.transpose(2, 0, 1)
+            image = torch.from_numpy(image).unsqueeze(0)
+            image = image.to(self.device)
+            scale = scale.to(self.device)
+
+
             loc, conf, landms = self.model(image)  # forward pass
 
-        priorbox = PriorBox(cfg_re50, image_size=(im_height, im_width))
-        priors = priorbox.forward()
-        priors = priors.to(self.device)
-        prior_data = priors.data
-        boxes = decode(loc.data.squeeze(0), prior_data, cfg_re50['variance'])
-        boxes = boxes * scale
-        boxes = boxes.cpu().numpy()
-        scores = conf.squeeze(0).data.cpu().numpy()[:, 1]
-        landms = decode_landm(landms.data.squeeze(0), prior_data, cfg_re50['variance'])
-        scale1 = torch.Tensor([image.shape[3], image.shape[2], image.shape[3], image.shape[2],
-                               image.shape[3], image.shape[2], image.shape[3], image.shape[2],
-                               image.shape[3], image.shape[2]])
-        scale1 = scale1.to(self.device)
-        landms = landms * scale1
-        landms = landms.cpu().numpy()
+            priorbox = PriorBox(cfg_re50, image_size=(im_height, im_width))
+            priors = priorbox.forward()
+            priors = priors.to(self.device)
+            prior_data = priors.data
+            boxes = decode(loc.data.squeeze(0), prior_data, cfg_re50['variance'])
+            boxes = boxes * scale
+            boxes = boxes.cpu().numpy()
+            scores = conf.squeeze(0).data.cpu().numpy()[:, 1]
+            landms = decode_landm(landms.data.squeeze(0), prior_data, cfg_re50['variance'])
+            scale1 = torch.Tensor([image.shape[3], image.shape[2], image.shape[3], image.shape[2],
+                                   image.shape[3], image.shape[2], image.shape[3], image.shape[2],
+                                   image.shape[3], image.shape[2]])
+            scale1 = scale1.to(self.device)
+            landms = landms * scale1
+            landms = landms.cpu().numpy()
 
         # ignore low scores
         inds = np.where(scores > self.confidence)[0]
