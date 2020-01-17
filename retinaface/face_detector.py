@@ -7,13 +7,13 @@ import torch
 from .data import cfg_re50
 from .layers.functions import PriorBox
 from .models.retinaface import RetinaFace, load_weights
-from .utils.box_utils import decode, decode_landm
+from .utils.box_utils import decode
 from .utils.nms.py_cpu_nms import py_cpu_nms
 
 
 class FaceDetector(object):
     def __init__(self, weights: str = "https://drive.google.com/uc?id=14KX6VqF69MdSPk3Tr9PlDYbq7ArpdNUW",
-                 confidence: float = 0.02, top_k: int = 5000, nms_threshold: float = 0.4, keep_top_k: int = 750,
+                 confidence: float = 0.1, top_k: int = 5000, nms_threshold: float = 0.4, keep_top_k: int = 750,
                  cpu: bool = False, padding: float = 0.2):
         self.confidence = confidence
         self.top_k = top_k
@@ -42,11 +42,10 @@ class FaceDetector(object):
             im_height, im_width, _ = image.shape
             scale = torch.Tensor([image.shape[1], image.shape[0], image.shape[1], image.shape[0]])
             image -= (104, 117, 123)
-            image = image.transpose(2, 0, 1)
+            image = np.moveaxis(image, -1, 0)
             image = torch.from_numpy(image).unsqueeze(0)
             image = image.to(self.device)
             scale = scale.to(self.device)
-
 
             loc, conf, landms = self.model(image)  # forward pass
 
@@ -58,38 +57,24 @@ class FaceDetector(object):
             boxes = boxes * scale
             boxes = boxes.cpu().numpy()
             scores = conf.squeeze(0).data.cpu().numpy()[:, 1]
-            landms = decode_landm(landms.data.squeeze(0), prior_data, cfg_re50['variance'])
-            scale1 = torch.Tensor([image.shape[3], image.shape[2], image.shape[3], image.shape[2],
-                                   image.shape[3], image.shape[2], image.shape[3], image.shape[2],
-                                   image.shape[3], image.shape[2]])
-            scale1 = scale1.to(self.device)
-            landms = landms * scale1
-            landms = landms.cpu().numpy()
 
         # ignore low scores
         inds = np.where(scores > self.confidence)[0]
         boxes = boxes[inds]
-        landms = landms[inds]
         scores = scores[inds]
 
         # keep top-K before NMS
         order = scores.argsort()[::-1][:self.top_k]
         boxes = boxes[order]
-        landms = landms[order]
         scores = scores[order]
 
         # do NMS
         dets = np.hstack((boxes, scores[:, np.newaxis])).astype(np.float32, copy=False)
         keep = py_cpu_nms(dets, self.nms_threshold)
         dets = dets[keep, :]
-        landms = landms[keep]
 
         # keep top-K faster NMS
         dets = dets[:self.keep_top_k, :]
-        landms = landms[:self.keep_top_k, :]
-
-        dets = np.concatenate((dets, landms), axis=1)
-
         faces = []
         scores = []
         for b in dets:
