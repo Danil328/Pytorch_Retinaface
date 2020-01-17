@@ -4,11 +4,11 @@ import gdown
 import numpy as np
 import torch
 
-from data import cfg_re50
-from layers.functions.prior_box import PriorBox
-from models.retinaface import RetinaFace, load_weights
-from utils.box_utils import decode, decode_landm
-from utils.nms.py_cpu_nms import py_cpu_nms
+from .data import cfg_re50
+from .layers.functions.prior_box import PriorBox
+from .models.retinaface import RetinaFace, load_weights
+from .utils.box_utils import decode, decode_landm
+from .utils.nms.py_cpu_nms import py_cpu_nms
 
 
 class FaceDetector(object):

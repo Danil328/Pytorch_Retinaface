@@ -1,7 +1,7 @@
-import torch
 from itertools import product as product
-import numpy as np
 from math import ceil
+
+import torch
 
 
 class PriorBox(object):
