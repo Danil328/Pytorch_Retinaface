@@ -33,7 +33,7 @@ setup(
     url='https://github.com/Danil328/Pytorch_Retinaface.git',
     packages=find_packages(),
     install_requires=[
-        'torchvision', 'torch>=1.1',
+        'torchvision', 'torch>=1.1', "gdown"
     ],
     setup_requires=['pytest-runner'],
     python_requires='>=3.6.0'
